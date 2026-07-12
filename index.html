@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="受験スケジュール">
+  <title>受験スケジュール</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===== HOME ===== -->
+<div id="page-home" class="page">
+  <div class="page-header"><h1>🏠 ホーム</h1></div>
+
+  <div class="review-alert show" id="review-alert">⚠️ 今日の振り返りがまだ入力されていません！</div>
+
+  <div class="streak-card">
+    <div class="streak-flame">🔥</div>
+    <div>
+      <div id="streak-num" class="streak-num">0</div>
+      <div class="streak-label">連続記録（日）</div>
+    </div>
+    <div id="streak-badge" class="streak-badge todo">⚠️ 振り返り未入力</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+    <button class="btn btn-primary" onclick="showTab('today')">📅 今日の予定を見る</button>
+    <button class="btn btn-review" id="btn-review-home" onclick="showTab('review')">📝 振り返りを入力する</button>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">今日のポイント</div>
+    <p style="font-size:14px;color:var(--text2);line-height:1.7;">
+      毎日の振り返りを続けることで、<br>
+      苦手な教科が見えてくる。<br>
+      受験まであと少し、頑張れ！💪
+    </p>
+  </div>
+</div>
+
+<!-- ===== TODAY ===== -->
+<div id="page-today" class="page">
+  <div class="page-header">
+    <h1>📅 今日の予定</h1>
+  </div>
+
+  <div id="today-date-label" class="today-date"></div>
+
+  <div class="card">
+    <div class="card-title">🏫 塾の予定</div>
+    <div id="juku-events-list"></div>
+    <button class="btn-sm add" style="margin-top:10px" onclick="openAddJukuModal()">＋ 塾を追加</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📚 今日の自習計画</div>
+    <div id="study-plans-list"></div>
+    <button class="btn-sm add" style="margin-top:10px" onclick="openAddPlanModal()">＋ 自習を追加</button>
+  </div>
+</div>
+
+<!-- ===== REVIEW ===== -->
+<div id="page-review" class="page">
+  <div class="page-header"><h1>📝 振り返り</h1></div>
+
+  <div id="review-date-label" class="today-date"></div>
+
+  <!-- Juku section -->
+  <div class="card" id="review-juku-section">
+    <div class="card-title">🏫 塾の授業</div>
+    <div class="form-group">
+      <label class="form-label">今日の授業は？</label>
+      <div class="mood-row">
+        <button class="mood-btn" id="mood-good">😊 よかった</button>
+        <button class="mood-btn selected" id="mood-normal">😐 普通</button>
+        <button class="mood-btn" id="mood-hard">😓 難しかった</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">授業のメモ（任意）</label>
+      <textarea id="review-juku-comment" class="form-textarea" placeholder="例）因数分解が難しかった…"></textarea>
+    </div>
+  </div>
+
+  <!-- Study records -->
+  <div class="card">
+    <div class="card-title">📚 今日やった自習（実績時間）</div>
+    <div id="review-records-list"></div>
+    <button class="btn-sm add" style="margin-top:10px" onclick="openAddRecordModal()">＋ 追加</button>
+  </div>
+
+  <!-- Daily memo -->
+  <div class="card">
+    <div class="card-title">💬 今日一言</div>
+    <textarea id="review-memo" class="form-textarea" placeholder="今日の感想を一言..."></textarea>
+  </div>
+
+  <button class="btn btn-primary" style="margin-top:4px" onclick="saveReview()">✅ 振り返りを保存</button>
+</div>
+
+<!-- ===== PROGRESS ===== -->
+<div id="page-progress" class="page">
+  <div class="page-header"><h1>📊 学習進捗</h1></div>
+
+  <div class="segment" id="progress-segment">
+    <button class="seg-btn active" data-period="today">今日</button>
+    <button class="seg-btn" data-period="week">今週</button>
+    <button class="seg-btn" data-period="month">今月</button>
+  </div>
+
+  <div class="summary-row">
+    <div class="summary-box">
+      <div id="prog-total" class="summary-val">0分</div>
+      <div class="summary-lbl">実績時間</div>
+    </div>
+    <div class="summary-box">
+      <div id="prog-rate" class="summary-val" style="color:var(--accent)">ー</div>
+      <div class="summary-lbl">達成率</div>
+    </div>
+    <div class="summary-box">
+      <div id="prog-subjects" class="summary-val" style="color:var(--accent2)">0科目</div>
+      <div class="summary-lbl">学習科目</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">教科別 学習時間</div>
+    <div id="subject-bars"></div>
+  </div>
+
+  <div class="card" id="daily-chart-section" style="display:none">
+    <div class="card-title">日別 学習時間</div>
+    <canvas id="daily-chart" height="160"></canvas>
+  </div>
+
+  <div class="card" id="pie-chart-section" style="display:none">
+    <div class="card-title">教科バランス</div>
+    <canvas id="pie-chart" height="200"></canvas>
+  </div>
+</div>
+
+<!-- ===== TAB BAR ===== -->
+<nav id="tab-bar">
+  <button class="tab-btn active" data-tab="home">
+    <span class="icon">🏠</span>ホーム
+  </button>
+  <button class="tab-btn" data-tab="today">
+    <span class="icon">📅</span>今日の予定
+  </button>
+  <button class="tab-btn" data-tab="review">
+    <span class="icon">📝</span>振り返り
+  </button>
+  <button class="tab-btn" data-tab="progress">
+    <span class="icon">📊</span>進捗
+  </button>
+</nav>
+
+<!-- ===== MODAL: 塾追加 ===== -->
+<div class="modal-overlay" id="modal-add-juku">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🏫 塾を追加</div>
+    <div class="form-group">
+      <label class="form-label">教科</label>
+      <select id="juku-subject-select" class="form-select"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">開始時間</label>
+      <input id="juku-start-time" type="time" class="form-input" value="16:30">
+    </div>
+    <div class="form-group">
+      <label class="form-label">授業時間</label>
+      <select id="juku-duration" class="form-select">
+        <option value="60">60分</option>
+        <option value="90" selected>90分</option>
+        <option value="120">120分</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm cancel" style="flex:1;padding:12px" onclick="closeModal('modal-add-juku')">キャンセル</button>
+      <button class="btn-sm submit" style="flex:2;padding:12px" onclick="submitAddJuku()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 自習計画追加 ===== -->
+<div class="modal-overlay" id="modal-add-plan">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📚 自習を追加</div>
+    <div class="form-group">
+      <label class="form-label">教科</label>
+      <select id="plan-subject-select" class="form-select"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">内容（任意）</label>
+      <input id="plan-note-input" type="text" class="form-input" placeholder="例）P.23〜25">
+    </div>
+    <div class="form-group">
+      <label class="form-label">予定時間</label>
+      <select id="plan-minutes-select" class="form-select"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm cancel" style="flex:1;padding:12px" onclick="closeModal('modal-add-plan')">キャンセル</button>
+      <button class="btn-sm submit" style="flex:2;padding:12px" onclick="submitAddPlan()">追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 実績追加 ===== -->
+<div class="modal-overlay" id="modal-add-record">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📚 自習を追加</div>
+    <div class="form-group">
+      <label class="form-label">教科</label>
+      <select id="record-subject-select" class="form-select"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">内容（任意）</label>
+      <input id="record-note-input" type="text" class="form-input" placeholder="例）過去問演習">
+    </div>
+    <div class="form-group">
+      <label class="form-label">実績時間</label>
+      <select id="record-minutes-select" class="form-select"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm cancel" style="flex:1;padding:12px" onclick="closeModal('modal-add-record')">キャンセル</button>
+      <button class="btn-sm submit" style="flex:2;padding:12px" onclick="submitAddRecord()">追加</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
