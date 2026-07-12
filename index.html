@@ -78,6 +78,14 @@
 
   <div id="review-date-label" class="today-date"></div>
 
+  <div id="review-future-msg" style="display:none" class="card">
+    <div style="text-align:center;padding:16px;color:var(--text2)">
+      📅 この日はまだ来ていません<br>
+      <span style="font-size:13px">振り返りは当日以降に入力できます</span>
+    </div>
+  </div>
+
+  <div id="review-form-body">
   <!-- Juku section -->
   <div class="card" id="review-juku-section">
     <div class="card-title">🏫 塾の授業</div>
@@ -108,7 +116,9 @@
     <textarea id="review-memo" class="form-textarea" placeholder="今日の感想を一言..."></textarea>
   </div>
 
-  <button class="btn btn-primary" style="margin-top:4px" onclick="saveReview()">✅ 振り返りを保存</button>
+  </div><!-- /review-form-body -->
+
+  <button class="btn btn-primary" id="review-save-btn" style="margin-top:4px" onclick="saveReview()">✅ 振り返りを保存</button>
 </div>
 
 <!-- ===== PROGRESS ===== -->

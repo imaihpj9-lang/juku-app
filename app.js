@@ -98,20 +98,22 @@ let selectedDate = todayKey();
 function changeDate(delta) {
   const d = new Date(selectedDate + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  if (d > new Date()) return;
   selectedDate = dateKey(d);
   updateDateNavUI();
   if (currentTab === 'today') renderToday();
   if (currentTab === 'review') renderReview();
 }
 
+function isFuture(dateStr) { return dateStr > todayKey(); }
+
 function updateDateNavUI() {
   const isToday = selectedDate === todayKey();
   ['today', 'review'].forEach(tab => {
     const label = document.getElementById(`${tab}-date-label`);
-    const nextBtn = document.getElementById(`${tab}-date-next`);
-    if (label) label.textContent = isToday ? `📅 ${fmtDate(selectedDate)}（今日）` : `📅 ${fmtDate(selectedDate)}`;
-    if (nextBtn) nextBtn.disabled = isToday;
+    if (!label) return;
+    if (isToday) label.textContent = `📅 ${fmtDate(selectedDate)}（今日）`;
+    else if (isFuture(selectedDate)) label.textContent = `📅 ${fmtDate(selectedDate)}（予定）`;
+    else label.textContent = `📅 ${fmtDate(selectedDate)}`;
   });
 }
 
@@ -263,6 +265,20 @@ function renderReview() {
       actualMin: p.plannedMin,
     }));
   }
+
+  // 未来日付は振り返り不可
+  const futureMsg = document.getElementById('review-future-msg');
+  const reviewForm = document.getElementById('review-form-body');
+  const saveBtn = document.getElementById('review-save-btn');
+  if (isFuture(today)) {
+    futureMsg.style.display = '';
+    reviewForm.style.display = 'none';
+    saveBtn.style.display = 'none';
+    return;
+  }
+  futureMsg.style.display = 'none';
+  reviewForm.style.display = '';
+  saveBtn.style.display = '';
 
   // Juku section visibility
   const events = DB.getJukuEvents(selectedDate);
