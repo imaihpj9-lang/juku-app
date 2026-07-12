@@ -164,8 +164,17 @@ function renderToday() {
   const today = selectedDate;
   updateDateNavUI();
 
-  // Juku events
-  const events = DB.getJukuEvents(today);
+  // Google連携バナー・同期ボタン制御
+  const connected = isGcConnected();
+  const banner = document.getElementById('gc-connect-banner');
+  const syncBtn = document.getElementById('gc-sync-btn');
+  if (banner) banner.style.display = connected ? 'none' : '';
+  if (syncBtn) syncBtn.style.display = connected ? '' : 'none';
+
+  // Juku events（手動 + Googleカレンダー）
+  const manualEvents = DB.getJukuEvents(today);
+  const gcEvs = getGcEvents(today);
+  const events = [...gcEvs, ...manualEvents];
   const evEl = document.getElementById('juku-events-list');
   if (events.length === 0) {
     evEl.innerHTML = '<div class="empty">今日の塾はありません</div>';
@@ -550,6 +559,90 @@ function buildMinuteOptions(selectId) {
   el.innerHTML = MINUTE_OPTIONS.map(m => `<option value="${m}"${m===30?' selected':''}>${m}分</option>`).join('');
 }
 
+// ===== GOOGLE CALENDAR =====
+let gcTokenClient = null;
+
+function gcClientId() { return localStorage.getItem('gc_client_id') || ''; }
+
+function initGoogleCalendar() {
+  if (!window.google || !gcClientId()) return;
+  gcTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: gcClientId(),
+    scope: 'https://www.googleapis.com/auth/calendar.readonly',
+    callback: async (resp) => {
+      if (resp.error) { alert('Googleログインに失敗しました'); return; }
+      localStorage.setItem('gc_token', resp.access_token);
+      await syncGoogleCalendar();
+      renderToday();
+      alert('Googleカレンダーと連携しました！✅');
+    }
+  });
+}
+
+async function connectGoogleCalendar() {
+  const clientId = gcClientId();
+  if (!clientId) {
+    const id = prompt('Google OAuth クライアントIDを入力してください：');
+    if (!id) return;
+    localStorage.setItem('gc_client_id', id.trim());
+    initGoogleCalendar();
+  }
+  if (!gcTokenClient) { initGoogleCalendar(); }
+  gcTokenClient?.requestAccessToken({ prompt: 'consent' });
+}
+
+async function syncGoogleCalendar() {
+  const token = localStorage.getItem('gc_token');
+  if (!token) return;
+
+  const now = new Date();
+  const future = new Date();
+  future.setDate(future.getDate() + 90);
+
+  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
+    `timeMin=${encodeURIComponent(now.toISOString())}&` +
+    `timeMax=${encodeURIComponent(future.toISOString())}&` +
+    `q=${encodeURIComponent('明光')}&singleEvents=true&orderBy=startTime&maxResults=300`;
+
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+
+  if (resp.status === 401) {
+    localStorage.removeItem('gc_token');
+    gcTokenClient?.requestAccessToken({ prompt: '' });
+    return;
+  }
+
+  const data = await resp.json();
+  const events = (data.items || []).map(e => {
+    const startDt = e.start?.dateTime ? new Date(e.start.dateTime) : null;
+    const endDt   = e.end?.dateTime   ? new Date(e.end.dateTime)   : null;
+    const subject = extractGcSubject(e.summary || '');
+    return {
+      id: e.id,
+      date: startDt ? dateKey(startDt) : (e.start?.date || ''),
+      subjectId: SUBJECTS.find(s => s.name === subject)?.id || 'other',
+      startTime: startDt ? startDt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
+      durationMin: startDt && endDt ? Math.round((endDt - startDt) / 60000) : 90,
+    };
+  });
+
+  localStorage.setItem('gc_events', JSON.stringify(events));
+}
+
+function extractGcSubject(title) {
+  for (const s of SUBJECTS) {
+    if (title.includes(s.name)) return s.name;
+  }
+  return 'その他';
+}
+
+function getGcEvents(dateStr) {
+  const all = JSON.parse(localStorage.getItem('gc_events') || '[]');
+  return all.filter(e => e.date === dateStr);
+}
+
+function isGcConnected() { return !!localStorage.getItem('gc_token'); }
+
 // ===== NOTIFICATIONS =====
 async function requestNotificationPermission() {
   if (!('Notification' in window)) return;
@@ -574,5 +667,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   requestNotificationPermission();
+
+  // Google Identity Services 読み込み後に初期化
+  window.addEventListener('load', () => {
+    if (window.google) initGoogleCalendar();
+  });
+
   showTab('home');
 });
