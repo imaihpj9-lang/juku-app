@@ -92,6 +92,29 @@ const DB = {
   }
 };
 
+// ===== DATE NAVIGATION =====
+let selectedDate = todayKey();
+
+function changeDate(delta) {
+  const d = new Date(selectedDate + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  if (d > new Date()) return;
+  selectedDate = dateKey(d);
+  updateDateNavUI();
+  if (currentTab === 'today') renderToday();
+  if (currentTab === 'review') renderReview();
+}
+
+function updateDateNavUI() {
+  const isToday = selectedDate === todayKey();
+  ['today', 'review'].forEach(tab => {
+    const label = document.getElementById(`${tab}-date-label`);
+    const nextBtn = document.getElementById(`${tab}-date-next`);
+    if (label) label.textContent = isToday ? `📅 ${fmtDate(selectedDate)}（今日）` : `📅 ${fmtDate(selectedDate)}`;
+    if (nextBtn) nextBtn.disabled = isToday;
+  });
+}
+
 // ===== NAVIGATION =====
 let currentTab = 'home';
 
@@ -130,8 +153,8 @@ function renderHome() {
 
 // ===== TODAY =====
 function renderToday() {
-  const today = todayKey();
-  document.getElementById('today-date-label').textContent = fmtDate(today);
+  const today = selectedDate;
+  updateDateNavUI();
 
   // Juku events
   const events = DB.getJukuEvents(today);
@@ -184,7 +207,7 @@ function openAddJukuModal() {
   openModal('modal-add-juku');
 }
 function submitAddJuku() {
-  const today = todayKey();
+  const today = selectedDate;
   const subjectId = document.getElementById('juku-subject-select').value;
   const startTime = document.getElementById('juku-start-time').value;
   const dur = parseInt(document.getElementById('juku-duration').value);
@@ -201,7 +224,7 @@ function openAddPlanModal() {
   openModal('modal-add-plan');
 }
 function submitAddPlan() {
-  const today = todayKey();
+  const today = selectedDate;
   const subjectId = document.getElementById('plan-subject-select').value;
   const note = document.getElementById('plan-note-input').value.trim();
   const min = parseInt(document.getElementById('plan-minutes-select').value);
@@ -215,8 +238,8 @@ let reviewMood = 'normal';
 let reviewRecords = [];
 
 function renderReview() {
-  const today = todayKey();
-  document.getElementById('review-date-label').textContent = fmtDate(today);
+  const today = selectedDate;
+  updateDateNavUI();
 
   const existing = DB.getReview(today);
   reviewMood = existing?.mood || 'normal';
@@ -242,7 +265,7 @@ function renderReview() {
   }
 
   // Juku section visibility
-  const events = DB.getJukuEvents(today);
+  const events = DB.getJukuEvents(selectedDate);
   document.getElementById('review-juku-section').style.display = events.length > 0 ? '' : 'none';
 
   renderReviewRecords();
@@ -299,7 +322,7 @@ function submitAddRecord() {
 }
 
 function saveReview() {
-  const today = todayKey();
+  const today = selectedDate;
   const jukuComment = document.getElementById('review-juku-comment').value.trim();
   const memo = document.getElementById('review-memo').value.trim();
 
@@ -336,6 +359,32 @@ function setProgressPeriod(period) {
 function renderProgressData() {
   const { startStr, endStr, days } = getPeriodRange(progressPeriod);
   const records = DB.getRecordsInRange(startStr, endStr);
+
+  // 今日の詳細リスト（今日タブのみ）
+  const detailSection = document.getElementById('today-detail-section');
+  if (progressPeriod === 'today') {
+    const todayRecords = DB.getRecords(todayKey());
+    const review = DB.getReview(todayKey());
+    detailSection.style.display = '';
+    detailSection.innerHTML = `<div class="card">
+      <div class="card-title">📋 今日の入力内容</div>
+      ${todayRecords.length === 0 ? '<div class="empty">まだ記録がありません</div>' :
+        todayRecords.map(r => {
+          const s = subjectById(r.subjectId);
+          return `<div class="plan-item">
+            <div class="plan-emoji">${s.emoji}</div>
+            <div class="plan-info">
+              <div class="plan-subject">${s.name}</div>
+              ${r.note ? `<div class="plan-note">${r.note}</div>` : ''}
+            </div>
+            <div class="plan-time">${fmtMinutes(r.actualMin)}</div>
+          </div>`;
+        }).join('')}
+      ${review?.memo ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--surface2);font-size:13px;color:var(--text2)">💬 ${review.memo}</div>` : ''}
+    </div>`;
+  } else {
+    detailSection.style.display = 'none';
+  }
 
   // Subject totals
   const subjectMap = {};

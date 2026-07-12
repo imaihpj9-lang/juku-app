@@ -70,7 +70,6 @@ body {
 }
 .page-header h1 { font-size: 20px; font-weight: 700; }
 .page-header .btn-icon {
-  margin-left: auto;
   background: var(--surface2);
   border: none;
   color: var(--text);
@@ -80,6 +79,7 @@ body {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
+.page-header .btn-icon:disabled { opacity: .3; cursor: default; }
 
 /* ===== CARDS ===== */
 .card {
