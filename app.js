@@ -581,32 +581,53 @@ async function openGcSetup() {
 }
 
 async function syncFromICS() {
-  const url = gcIcsUrl();
+  let url = gcIcsUrl();
   if (!url) return false;
+
+  // webcal:// → https:// に変換
+  url = url.replace(/^webcal:\/\//i, 'https://');
+
   const btn = document.getElementById('gc-sync-btn');
   if (btn) btn.textContent = '⏳ 同期中...';
-  try {
-    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const resp = await fetch(proxy);
-    const data = await resp.json();
-    const events = parseICS(data.contents);
-    const juku = events
-      .filter(e => (e.summary || '').includes('明光'))
-      .map(e => ({
-        id: e.uid,
-        date: e.date,
-        subjectId: SUBJECTS.find(s => (e.summary || '').includes(s.name))?.id || 'other',
-        startTime: e.startTime,
-        durationMin: e.durationMin || 90,
-      }));
-    localStorage.setItem('gc_events', JSON.stringify(juku));
-    if (btn) btn.textContent = '🔄 同期';
-    return true;
-  } catch {
-    if (btn) btn.textContent = '🔄 同期';
-    alert('読み込みに失敗しました。URLを確認してください。');
-    return false;
+
+  const proxies = [
+    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  ];
+
+  for (const makeProxy of proxies) {
+    try {
+      const resp = await fetch(makeProxy(url), { signal: AbortSignal.timeout(8000) });
+      if (!resp.ok) continue;
+      const raw = await resp.text();
+      // allorigins は JSON で返す
+      let icsText = raw;
+      try {
+        const j = JSON.parse(raw);
+        if (j.contents) icsText = j.contents;
+      } catch {}
+      if (!icsText.includes('BEGIN:VCALENDAR')) continue;
+
+      const events = parseICS(icsText);
+      const juku = events
+        .filter(e => (e.summary || '').includes('明光'))
+        .map(e => ({
+          id: e.uid,
+          date: e.date,
+          subjectId: SUBJECTS.find(s => (e.summary || '').includes(s.name))?.id || 'other',
+          startTime: e.startTime,
+          durationMin: e.durationMin || 90,
+        }));
+      localStorage.setItem('gc_events', JSON.stringify(juku));
+      if (btn) btn.textContent = '🔄 同期';
+      return true;
+    } catch { continue; }
   }
+
+  if (btn) btn.textContent = '🔄 同期';
+  alert('読み込みに失敗しました。\niCal URLが正しいか確認してください。\n（webcal:// または https:// で始まるURL）');
+  return false;
 }
 
 function parseICS(text) {
