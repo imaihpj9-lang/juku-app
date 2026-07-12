@@ -21,8 +21,14 @@ const MINUTE_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120];
 
 function subjectById(id) { return SUBJECTS.find(s => s.id === id) || SUBJECTS[6]; }
 function subjectByName(name) { return SUBJECTS.find(s => s.name === name) || SUBJECTS[6]; }
-function todayKey() { return new Date().toISOString().slice(0, 10); }
-function dateKey(d) { return new Date(d).toISOString().slice(0, 10); }
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function dateKey(d) {
+  const dt = new Date(d);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
 function fmtMinutes(min) {
   if (!min) return '0分';
   const h = Math.floor(min / 60), m = min % 60;
