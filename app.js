@@ -559,89 +559,107 @@ function buildMinuteOptions(selectId) {
   el.innerHTML = MINUTE_OPTIONS.map(m => `<option value="${m}"${m===30?' selected':''}>${m}分</option>`).join('');
 }
 
-// ===== GOOGLE CALENDAR =====
-let gcTokenClient = null;
+// ===== GOOGLE CALENDAR (iCal) =====
+function gcIcsUrl() { return localStorage.getItem('gc_ics_url') || ''; }
+function isGcConnected() { return !!gcIcsUrl() && localStorage.getItem('gc_events'); }
 
-function gcClientId() { return localStorage.getItem('gc_client_id') || ''; }
+async function openGcSetup() {
+  const current = gcIcsUrl();
+  const url = prompt(
+    'GoogleカレンダーのiCal URLを貼り付けてください。\n\n' +
+    '【取得方法】\n' +
+    '① Googleカレンダーを開く\n' +
+    '② 右上の歯車⚙️→「設定」\n' +
+    '③ 左の「穂のカレンダー」をクリック\n' +
+    '④「カレンダーの統合」→「iCal形式の非公開URL」をコピー',
+    current
+  );
+  if (url === null) return;
+  localStorage.setItem('gc_ics_url', url.trim());
+  const ok = await syncFromICS();
+  if (ok) { renderToday(); alert('カレンダーと連携しました！✅'); }
+}
 
-function initGoogleCalendar() {
-  if (!window.google || !gcClientId()) return;
-  gcTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: gcClientId(),
-    scope: 'https://www.googleapis.com/auth/calendar.readonly',
-    callback: async (resp) => {
-      if (resp.error) { alert('Googleログインに失敗しました'); return; }
-      localStorage.setItem('gc_token', resp.access_token);
-      await syncGoogleCalendar();
-      renderToday();
-      alert('Googleカレンダーと連携しました！✅');
+async function syncFromICS() {
+  const url = gcIcsUrl();
+  if (!url) return false;
+  const btn = document.getElementById('gc-sync-btn');
+  if (btn) btn.textContent = '⏳ 同期中...';
+  try {
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxy);
+    const data = await resp.json();
+    const events = parseICS(data.contents);
+    const juku = events
+      .filter(e => (e.summary || '').includes('明光'))
+      .map(e => ({
+        id: e.uid,
+        date: e.date,
+        subjectId: SUBJECTS.find(s => (e.summary || '').includes(s.name))?.id || 'other',
+        startTime: e.startTime,
+        durationMin: e.durationMin || 90,
+      }));
+    localStorage.setItem('gc_events', JSON.stringify(juku));
+    if (btn) btn.textContent = '🔄 同期';
+    return true;
+  } catch {
+    if (btn) btn.textContent = '🔄 同期';
+    alert('読み込みに失敗しました。URLを確認してください。');
+    return false;
+  }
+}
+
+function parseICS(text) {
+  text = text.replace(/\r\n /g, '').replace(/\r\n\t/g, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const events = [];
+  let cur = null;
+  for (const line of text.split('\n')) {
+    const ci = line.indexOf(':');
+    if (ci < 0) continue;
+    const key = line.slice(0, ci);
+    const val = line.slice(ci + 1).trim();
+    const base = key.split(';')[0];
+    if (base === 'BEGIN' && val === 'VEVENT') { cur = {}; }
+    else if (base === 'END' && val === 'VEVENT' && cur) { events.push(cur); cur = null; }
+    else if (cur) {
+      if (base === 'SUMMARY') cur.summary = val.replace(/\\,/g, ',').replace(/\\n/g, ' ');
+      else if (base === 'UID') cur.uid = val;
+      else if (base === 'DTSTART') Object.assign(cur, parseICSdt(val));
+      else if (base === 'DTEND') cur._endMs = parseICStMs(val);
     }
-  });
+  }
+  for (const e of events) {
+    if (e._startMs && e._endMs) e.durationMin = Math.round((e._endMs - e._startMs) / 60000);
+  }
+  return events;
 }
 
-async function connectGoogleCalendar() {
-  const clientId = gcClientId();
-  if (!clientId) {
-    const id = prompt('Google OAuth クライアントIDを入力してください：');
-    if (!id) return;
-    localStorage.setItem('gc_client_id', id.trim());
-    initGoogleCalendar();
-  }
-  if (!gcTokenClient) { initGoogleCalendar(); }
-  gcTokenClient?.requestAccessToken({ prompt: 'consent' });
+function parseICSdt(val) {
+  const isUTC = val.endsWith('Z');
+  const v = val.replace('Z', '');
+  const yr = +v.slice(0,4), mo = +v.slice(4,6)-1, dy = +v.slice(6,8);
+  if (!v.includes('T')) return { date: `${yr}-${String(mo+1).padStart(2,'0')}-${String(dy).padStart(2,'0')}`, startTime: '', _startMs: new Date(yr,mo,dy).getTime() };
+  const hr = +v.slice(9,11), mn = +v.slice(11,13);
+  const dt = isUTC ? new Date(Date.UTC(yr,mo,dy,hr,mn)) : new Date(yr,mo,dy,hr,mn);
+  return {
+    date: dateKey(dt),
+    startTime: dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+    _startMs: dt.getTime(),
+  };
 }
 
-async function syncGoogleCalendar() {
-  const token = localStorage.getItem('gc_token');
-  if (!token) return;
-
-  const now = new Date();
-  const future = new Date();
-  future.setDate(future.getDate() + 90);
-
-  const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
-    `timeMin=${encodeURIComponent(now.toISOString())}&` +
-    `timeMax=${encodeURIComponent(future.toISOString())}&` +
-    `q=${encodeURIComponent('明光')}&singleEvents=true&orderBy=startTime&maxResults=300`;
-
-  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-
-  if (resp.status === 401) {
-    localStorage.removeItem('gc_token');
-    gcTokenClient?.requestAccessToken({ prompt: '' });
-    return;
-  }
-
-  const data = await resp.json();
-  const events = (data.items || []).map(e => {
-    const startDt = e.start?.dateTime ? new Date(e.start.dateTime) : null;
-    const endDt   = e.end?.dateTime   ? new Date(e.end.dateTime)   : null;
-    const subject = extractGcSubject(e.summary || '');
-    return {
-      id: e.id,
-      date: startDt ? dateKey(startDt) : (e.start?.date || ''),
-      subjectId: SUBJECTS.find(s => s.name === subject)?.id || 'other',
-      startTime: startDt ? startDt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '',
-      durationMin: startDt && endDt ? Math.round((endDt - startDt) / 60000) : 90,
-    };
-  });
-
-  localStorage.setItem('gc_events', JSON.stringify(events));
-}
-
-function extractGcSubject(title) {
-  for (const s of SUBJECTS) {
-    if (title.includes(s.name)) return s.name;
-  }
-  return 'その他';
+function parseICStMs(val) {
+  const isUTC = val.endsWith('Z');
+  const v = val.replace('Z', '');
+  const yr = +v.slice(0,4), mo = +v.slice(4,6)-1, dy = +v.slice(6,8);
+  if (!v.includes('T')) return new Date(yr,mo,dy).getTime();
+  const hr = +v.slice(9,11), mn = +v.slice(11,13);
+  return isUTC ? Date.UTC(yr,mo,dy,hr,mn) : new Date(yr,mo,dy,hr,mn).getTime();
 }
 
 function getGcEvents(dateStr) {
-  const all = JSON.parse(localStorage.getItem('gc_events') || '[]');
-  return all.filter(e => e.date === dateStr);
+  return JSON.parse(localStorage.getItem('gc_events') || '[]').filter(e => e.date === dateStr);
 }
-
-function isGcConnected() { return !!localStorage.getItem('gc_token'); }
 
 // ===== NOTIFICATIONS =====
 async function requestNotificationPermission() {
@@ -667,11 +685,5 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   requestNotificationPermission();
-
-  // Google Identity Services 読み込み後に初期化
-  window.addEventListener('load', () => {
-    if (window.google) initGoogleCalendar();
-  });
-
   showTab('home');
 });

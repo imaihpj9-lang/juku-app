@@ -53,12 +53,12 @@
 
   <div id="today-date-label" class="today-date"></div>
 
-  <div id="gc-connect-banner" style="display:none" class="card" onclick="connectGoogleCalendar()" style="cursor:pointer">
+  <div id="gc-connect-banner" class="card" onclick="openGcSetup()" style="cursor:pointer">
     <div style="display:flex;align-items:center;gap:10px;">
       <span style="font-size:22px">📅</span>
       <div>
         <div style="font-weight:700;font-size:14px">Googleカレンダーと連携する</div>
-        <div style="font-size:12px;color:var(--text2)">塾の予定を自動で取り込む</div>
+        <div style="font-size:12px;color:var(--text2)">タップしてiCal URLを設定</div>
       </div>
       <span style="margin-left:auto;color:var(--accent)">›</span>
     </div>
@@ -271,7 +271,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="https://accounts.google.com/gsi/client" async></script>
 <script src="app.js"></script>
 </body>
 </html>
