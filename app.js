@@ -565,6 +565,10 @@ function openGcSetup() {
   alert('GitHubにiCal URLを登録してください。\n詳しくはお母さんに聞いてね。');
 }
 
+async function syncGoogleCalendar() {
+  return syncFromICS();
+}
+
 async function syncFromICS() {
   const btn = document.getElementById('gc-sync-btn');
   if (btn) btn.textContent = '⏳ 同期中...';
