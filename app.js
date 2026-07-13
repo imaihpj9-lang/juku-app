@@ -165,11 +165,11 @@ function renderToday() {
   updateDateNavUI();
 
   // Google連携バナー・同期ボタン制御
-  const connected = isGcConnected();
+  const hasUrl = !!gcIcsUrl();
   const banner = document.getElementById('gc-connect-banner');
   const syncBtn = document.getElementById('gc-sync-btn');
-  if (banner) banner.style.display = connected ? 'none' : '';
-  if (syncBtn) syncBtn.style.display = connected ? '' : 'none';
+  if (banner) banner.style.display = hasUrl ? 'none' : '';
+  if (syncBtn) syncBtn.style.display = hasUrl ? '' : 'none';
 
   // Juku events（手動 + Googleカレンダー）
   const manualEvents = DB.getJukuEvents(today);
