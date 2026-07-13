@@ -569,6 +569,10 @@ async function syncGoogleCalendar() {
   return syncFromICS();
 }
 
+function doSync() {
+  syncFromICS().then(() => renderToday());
+}
+
 async function syncFromICS() {
   const btn = document.getElementById('gc-sync-btn');
   if (btn) btn.textContent = '⏳ 同期中...';

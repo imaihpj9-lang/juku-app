@@ -67,7 +67,7 @@
   <div class="card">
     <div style="display:flex;align-items:center;margin-bottom:12px;">
       <div class="card-title" style="margin-bottom:0">🏫 塾の予定</div>
-      <button class="btn-sm add" style="margin-left:auto" id="gc-sync-btn" onclick="syncGoogleCalendar().then(()=>renderToday())" style="display:none">🔄 同期</button>
+      <button class="btn-sm add" style="margin-left:auto" id="gc-sync-btn" onclick="doSync()">🔄 同期</button>
     </div>
     <div id="juku-events-list"></div>
     <button class="btn-sm add" style="margin-top:10px" onclick="openAddJukuModal()">＋ 手動で追加</button>
@@ -289,6 +289,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
