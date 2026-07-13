@@ -164,12 +164,11 @@ function renderToday() {
   const today = selectedDate;
   updateDateNavUI();
 
-  // Google連携バナー・同期ボタン制御
-  const hasUrl = !!gcIcsUrl();
+  // Google連携バナー非表示・同期ボタン常時表示
   const banner = document.getElementById('gc-connect-banner');
   const syncBtn = document.getElementById('gc-sync-btn');
-  if (banner) banner.style.display = hasUrl ? 'none' : '';
-  if (syncBtn) syncBtn.style.display = hasUrl ? '' : 'none';
+  if (banner) banner.style.display = 'none';
+  if (syncBtn) syncBtn.style.display = '';
 
   // Juku events（手動 + Googleカレンダー）
   const manualEvents = DB.getJukuEvents(today);
@@ -560,64 +559,27 @@ function buildMinuteOptions(selectId) {
 }
 
 // ===== GOOGLE CALENDAR (iCal) =====
-function gcIcsUrl() { return localStorage.getItem('gc_ics_url') || ''; }
-function isGcConnected() { return !!gcIcsUrl() && localStorage.getItem('gc_events'); }
+function isGcConnected() { return !!localStorage.getItem('gc_events'); }
 
-async function openGcSetup() {
-  const current = gcIcsUrl();
-  const url = prompt(
-    'GoogleカレンダーのiCal URLを貼り付けてください。\n\n' +
-    '【取得方法】\n' +
-    '① Googleカレンダーを開く\n' +
-    '② 右上の歯車⚙️→「設定」\n' +
-    '③ 左の「穂のカレンダー」をクリック\n' +
-    '④「カレンダーの統合」→「iCal形式の非公開URL」をコピー',
-    current
-  );
-  if (url === null) return;
-  localStorage.setItem('gc_ics_url', url.trim());
-  const ok = await syncFromICS();
-  if (ok) { renderToday(); alert('カレンダーと連携しました！✅'); }
+function openGcSetup() {
+  alert('GitHubにiCal URLを登録してください。\n詳しくはお母さんに聞いてね。');
 }
 
 async function syncFromICS() {
-  let url = gcIcsUrl();
-  if (!url) return false;
-  url = url.replace(/^webcal:\/\//i, 'https://');
-
   const btn = document.getElementById('gc-sync-btn');
   if (btn) btn.textContent = '⏳ 同期中...';
-
-  const fetchers = [
-    // 直接フェッチ（CORS許可されている場合）
-    async u => { const r = await fetch(u, { signal: AbortSignal.timeout(6000) }); return await r.text(); },
-    // corsproxy.io
-    async u => { const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
-    // allorigins
-    async u => { const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); const j = await r.json(); return j.contents; },
-    // codetabs
-    async u => { const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
-    // thingproxy
-    async u => { const r = await fetch(`https://thingproxy.freeboard.io/fetch/${u}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
-  ];
-
-  for (const fetcher of fetchers) {
-    try {
-      const icsText = await fetcher(url);
-      if (!icsText || !icsText.includes('BEGIN:VCALENDAR')) continue;
-      return saveICSEvents(icsText, btn);
-    } catch { continue; }
+  try {
+    const resp = await fetch(`events.json?t=${Date.now()}`);
+    if (!resp.ok) throw new Error('not found');
+    const data = await resp.json();
+    localStorage.setItem('gc_events', JSON.stringify(data.events || []));
+    if (btn) btn.textContent = '🔄 同期';
+    return true;
+  } catch {
+    if (btn) btn.textContent = '🔄 同期';
+    alert('カレンダーデータがまだ準備できていません。\nしばらく待ってから再度お試しください。');
+    return false;
   }
-
-  if (btn) btn.textContent = '🔄 同期';
-  // すべて失敗したら手動入力を促す
-  const manual = confirm(
-    '自動読み込みに失敗しました。\n\n' +
-    '手動でiCal内容を貼り付けますか？\n' +
-    '（ブラウザでiCal URLを開いてCtrl+Aで全選択→コピー）'
-  );
-  if (manual) openManualICSInput();
-  return false;
 }
 
 function saveICSEvents(icsText, btn) {

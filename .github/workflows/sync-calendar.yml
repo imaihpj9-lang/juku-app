@@ -1,0 +1,25 @@
+name: Sync Google Calendar
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # 6時間ごとに自動実行
+  workflow_dispatch:          # 手動実行も可能
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch and parse iCal
+        run: node sync.js
+        env:
+          ICAL_URL: ${{ secrets.ICAL_URL }}
+
+      - name: Commit events.json
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add events.json
+          git diff --staged --quiet || git commit -m "Update calendar events [skip ci]"
+          git push
