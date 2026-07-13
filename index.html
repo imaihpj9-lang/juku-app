@@ -137,7 +137,10 @@
 
 <!-- ===== PROGRESS ===== -->
 <div id="page-progress" class="page">
-  <div class="page-header"><h1>📊 学習進捗</h1></div>
+  <div class="page-header">
+    <h1>📊 学習進捗</h1>
+    <button class="btn-sm add" style="margin-left:auto" onclick="exportCSV()">📥 エクスポート</button>
+  </div>
 
   <div class="segment" id="progress-segment">
     <button class="seg-btn active" data-period="today">今日</button>
@@ -289,6 +292,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="app.js?v=3"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

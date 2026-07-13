@@ -676,6 +676,60 @@ function getGcEvents(dateStr) {
   return JSON.parse(localStorage.getItem('gc_events') || '[]').filter(e => e.date === dateStr);
 }
 
+// ===== CSV EXPORT =====
+function exportCSV() {
+  const records = DB.get('study_records');
+  const reviews = DB.get('daily_reviews');
+  const jukuEvents = DB.get('juku_events');
+  const gcEvents = JSON.parse(localStorage.getItem('gc_events') || '[]');
+
+  // 全日付を収集
+  const dates = new Set([
+    ...records.map(r => r.date),
+    ...reviews.map(r => r.date),
+    ...jukuEvents.map(e => e.date),
+    ...gcEvents.map(e => e.date),
+  ]);
+  const sortedDates = [...dates].sort();
+
+  const MOOD_LABELS = { good: 'よかった', normal: '普通', hard: '難しかった' };
+
+  const rows = [['日付', '教科', '予定時間(分)', '実績時間(分)', '内容', '塾授業', '塾開始時間', '気分', '今日一言']];
+
+  for (const date of sortedDates) {
+    const dayRecords = records.filter(r => r.date === date);
+    const review = reviews.find(r => r.date === date);
+    const dayJuku = [...gcEvents.filter(e => e.date === date), ...jukuEvents.filter(e => e.date === date)];
+    const mood = review ? (MOOD_LABELS[review.mood] || '') : '';
+    const memo = review?.memo || '';
+    const jukuStr = dayJuku.map(e => subjectById(e.subjectId).name).join('・');
+    const jukuTime = dayJuku.map(e => e.startTime).join('・');
+
+    if (dayRecords.length > 0) {
+      for (const r of dayRecords) {
+        const s = subjectById(r.subjectId);
+        rows.push([date, s.name, r.plannedMin || 0, r.actualMin || 0, r.note || '', jukuStr, jukuTime, mood, memo]);
+      }
+    } else {
+      rows.push([date, '', '', '', '', jukuStr, jukuTime, mood, memo]);
+    }
+  }
+
+  if (rows.length <= 1) {
+    alert('エクスポートするデータがありません。');
+    return;
+  }
+
+  const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `学習記録_${todayKey()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ===== NOTIFICATIONS =====
 async function requestNotificationPermission() {
   if (!('Notification' in window)) return;
