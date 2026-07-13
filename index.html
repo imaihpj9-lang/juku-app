@@ -270,6 +270,24 @@
   </div>
 </div>
 
+<!-- ===== MODAL: iCal手動入力 ===== -->
+<div class="modal-overlay" id="modal-manual-ics">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📋 iCalを貼り付け</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+      ブラウザでiCal URLを開き、全文をコピーして貼り付けてください。
+    </p>
+    <div class="form-group">
+      <textarea id="manual-ics-text" class="form-textarea" style="min-height:160px;font-size:11px;font-family:monospace" placeholder="BEGIN:VCALENDAR&#10;VERSION:2.0&#10;..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sm cancel" style="flex:1;padding:12px" onclick="closeModal('modal-manual-ics')">キャンセル</button>
+      <button class="btn-sm submit" style="flex:2;padding:12px" onclick="submitManualICS()">読み込む</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="app.js"></script>
 </body>

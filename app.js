@@ -583,51 +583,75 @@ async function openGcSetup() {
 async function syncFromICS() {
   let url = gcIcsUrl();
   if (!url) return false;
-
-  // webcal:// → https:// に変換
   url = url.replace(/^webcal:\/\//i, 'https://');
 
   const btn = document.getElementById('gc-sync-btn');
   if (btn) btn.textContent = '⏳ 同期中...';
 
-  const proxies = [
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    u => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+  const fetchers = [
+    // 直接フェッチ（CORS許可されている場合）
+    async u => { const r = await fetch(u, { signal: AbortSignal.timeout(6000) }); return await r.text(); },
+    // corsproxy.io
+    async u => { const r = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
+    // allorigins
+    async u => { const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); const j = await r.json(); return j.contents; },
+    // codetabs
+    async u => { const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
+    // thingproxy
+    async u => { const r = await fetch(`https://thingproxy.freeboard.io/fetch/${u}`, { signal: AbortSignal.timeout(8000) }); return await r.text(); },
   ];
 
-  for (const makeProxy of proxies) {
+  for (const fetcher of fetchers) {
     try {
-      const resp = await fetch(makeProxy(url), { signal: AbortSignal.timeout(8000) });
-      if (!resp.ok) continue;
-      const raw = await resp.text();
-      // allorigins は JSON で返す
-      let icsText = raw;
-      try {
-        const j = JSON.parse(raw);
-        if (j.contents) icsText = j.contents;
-      } catch {}
-      if (!icsText.includes('BEGIN:VCALENDAR')) continue;
-
-      const events = parseICS(icsText);
-      const juku = events
-        .filter(e => (e.summary || '').includes('明光'))
-        .map(e => ({
-          id: e.uid,
-          date: e.date,
-          subjectId: SUBJECTS.find(s => (e.summary || '').includes(s.name))?.id || 'other',
-          startTime: e.startTime,
-          durationMin: e.durationMin || 90,
-        }));
-      localStorage.setItem('gc_events', JSON.stringify(juku));
-      if (btn) btn.textContent = '🔄 同期';
-      return true;
+      const icsText = await fetcher(url);
+      if (!icsText || !icsText.includes('BEGIN:VCALENDAR')) continue;
+      return saveICSEvents(icsText, btn);
     } catch { continue; }
   }
 
   if (btn) btn.textContent = '🔄 同期';
-  alert('読み込みに失敗しました。\niCal URLが正しいか確認してください。\n（webcal:// または https:// で始まるURL）');
+  // すべて失敗したら手動入力を促す
+  const manual = confirm(
+    '自動読み込みに失敗しました。\n\n' +
+    '手動でiCal内容を貼り付けますか？\n' +
+    '（ブラウザでiCal URLを開いてCtrl+Aで全選択→コピー）'
+  );
+  if (manual) openManualICSInput();
   return false;
+}
+
+function saveICSEvents(icsText, btn) {
+  const events = parseICS(icsText);
+  const juku = events
+    .filter(e => (e.summary || '').includes('明光'))
+    .map(e => ({
+      id: e.uid,
+      date: e.date,
+      subjectId: SUBJECTS.find(s => (e.summary || '').includes(s.name))?.id || 'other',
+      startTime: e.startTime,
+      durationMin: e.durationMin || 90,
+    }));
+  localStorage.setItem('gc_events', JSON.stringify(juku));
+  if (btn) btn.textContent = '🔄 同期';
+  return true;
+}
+
+function openManualICSInput() {
+  document.getElementById('modal-manual-ics').classList.add('open');
+}
+
+function submitManualICS() {
+  const text = document.getElementById('manual-ics-text').value.trim();
+  if (!text.includes('BEGIN:VCALENDAR')) {
+    alert('iCalの形式が正しくありません。\nBEGIN:VCALENDARから始まるテキストを貼り付けてください。');
+    return;
+  }
+  const ok = saveICSEvents(text, document.getElementById('gc-sync-btn'));
+  if (ok) {
+    document.getElementById('modal-manual-ics').classList.remove('open');
+    renderToday();
+    alert('カレンダーを読み込みました！✅');
+  }
 }
 
 function parseICS(text) {
