@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-10T12:44:57.114Z",
+  "updated": "2026-08-10T18:42:34.449Z",
   "events": [
     {
       "id": "2pdao21lbp0rv0uero66a4t54g@google.com",
@@ -480,7 +480,7 @@
     {
       "id": "5r8bjkecpd0hk76qhjj73bsllb@google.com",
       "date": "2026-08-24",
-      "subjectId": "english",
+      "subjectId": "other",
       "startTime": "13:10",
       "durationMin": 90
     },
