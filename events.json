@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-17T00:40:55.143Z",
+  "updated": "2026-08-17T06:34:09.685Z",
   "events": [
     {
       "id": "2pdao21lbp0rv0uero66a4t54g@google.com",
@@ -95,7 +95,7 @@
     {
       "id": "23chjf1j6648p7o7505pnt0n3b@google.com",
       "date": "2026-07-23",
-      "subjectId": "japanese",
+      "subjectId": "other",
       "startTime": "16:30",
       "durationMin": 60
     },
@@ -324,13 +324,6 @@
       "durationMin": 90
     },
     {
-      "id": "7l1d7rtt5fi5gbjj131ei7nb9e@google.com",
-      "date": "2026-08-07",
-      "subjectId": "math",
-      "startTime": "13:10",
-      "durationMin": 90
-    },
-    {
       "id": "5haou26g0ea3phbng99mibu1v6@google.com",
       "date": "2026-08-07",
       "subjectId": "science",
@@ -371,13 +364,6 @@
       "subjectId": "other",
       "startTime": "09:00",
       "durationMin": 30
-    },
-    {
-      "id": "4mvslripg11t8rgou4te11fs0v@google.com",
-      "date": "2026-08-10",
-      "subjectId": "math",
-      "startTime": "13:10",
-      "durationMin": 90
     },
     {
       "id": "22mh98nv2vh2adprcro782biiq@google.com",
@@ -473,7 +459,7 @@
     {
       "id": "5eg4k15eop18sgogi4amo70s53@google.com",
       "date": "2026-08-21",
-      "subjectId": "other",
+      "subjectId": "japanese",
       "startTime": "18:10",
       "durationMin": 90
     },
