@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-19T17:58:00.947Z",
+  "updated": "2026-10-19T22:00:11.388Z",
   "events": [
     {
       "id": "2pdao21lbp0rv0uero66a4t54g@google.com",
@@ -258,6 +258,13 @@
       "date": "2026-08-03",
       "subjectId": "japanese",
       "startTime": "16:30",
+      "durationMin": 90
+    },
+    {
+      "id": "3h4cn5cbr3ikv18f928cc2cquk@google.com",
+      "date": "2026-08-04",
+      "subjectId": "math",
+      "startTime": "13:10",
       "durationMin": 90
     },
     {
@@ -599,7 +606,7 @@
     {
       "id": "8B58ECC5-3599-4524-9DAF-2B7AC6B7433A",
       "date": "2026-09-14",
-      "subjectId": "other",
+      "subjectId": "math",
       "startTime": "16:30",
       "durationMin": 540
     },
