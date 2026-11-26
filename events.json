@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-26T01:19:08.938Z",
+  "updated": "2026-11-26T16:01:29.246Z",
   "events": [
     {
       "id": "2pdao21lbp0rv0uero66a4t54g@google.com",
@@ -201,13 +201,6 @@
       "id": "3npek2agu9jpo8nhtsftgq7979@google.com",
       "date": "2026-07-29",
       "subjectId": "math",
-      "startTime": "16:30",
-      "durationMin": 90
-    },
-    {
-      "id": "2jnk29qjdieorb4q8d349fud2q@google.com",
-      "date": "2026-07-30",
-      "subjectId": "science",
       "startTime": "16:30",
       "durationMin": 90
     },
